@@ -1,0 +1,126 @@
+package com.ahliunited.util;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.security.GeneralSecurityException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.util.Base64;
+
+import com.itextpdf.kernel.PdfException;
+import com.itextpdf.kernel.geom.Rectangle;
+import com.itextpdf.kernel.pdf.PdfReader;
+import com.itextpdf.signatures.BouncyCastleDigest;
+import com.itextpdf.signatures.DigestAlgorithms;
+import com.itextpdf.signatures.IExternalDigest;
+import com.itextpdf.signatures.IExternalSignature;
+import com.itextpdf.signatures.PdfSignatureAppearance;
+import com.itextpdf.signatures.PdfSigner;
+
+public class ClientServerSigning {
+
+	public static final String DEST = "./src/main/resources/";
+
+    public static final String SRC = "./src/main/resources/hello.pdf";
+    public static final String CERT = "https://demo.itextsupport.com/SigningApp/itextpdf.cer";
+
+    public static final String[] RESULT_FILES = new String[] {
+            "hello_server.pdf"
+    };
+
+    public static void main(String[] args) throws GeneralSecurityException, IOException {
+    	
+    	File fileToDelete = new File(RESULT_FILES[0]);
+    	boolean result = Files.deleteIfExists(fileToDelete.toPath());
+    	
+    	System.out.println("File Deleted? "+result);
+    	
+        File file = new File(DEST);
+        file.mkdirs();
+        Certificate[] chain = new Certificate[1];
+        
+        
+        CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        URL certUrl = new URL(CERT);
+        try (InputStream stream = certUrl.openStream()) {
+            chain[0] = factory.generateCertificate(stream);
+        }
+
+//        byte [] decoded = Base64.getDecoder().decode("MIIFTTCCBDWgAwIBAgIQdFpVNe3RH+mm+LTR+1WPMTANBgkqhkiG9w0BAQsFADBgMQswCQYDVQQGEwJLVzEzMDEGA1UEChMqVGhlIFB1YmxpYyBBdXRob3JpdHkgZm9yIENpdmlsIEluZm9ybWF0aW9uMRwwGgYDVQQDExNQQUNJIElEIElzc3VhbmNlIENBMB4XDTIyMDQxNDAwMDAwMFoXDTIzMDcyNDIzNTk1OVowgZkxCzAJBgNVBAYTAktXMTMwMQYDVQQKDCpUaGUgUHVibGljIEF1dGhvcml0eSBmb3IgQ2l2aWwgSW5mb3JtYXRpb24xGDAWBgNVBAsMD01vYmlsZSBDaXZpbCBJRDEcMBoGCgmSJomT8ixkAQEMDDI4NTA0MTYwNjIwMzEdMBsGA1UEAwwUR0FVUkFWIEIgTSBCSEFUTkFHQVIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC17bTgJirevJjuy1RiI/gKaK0HYZjAMbMWpZy4zptWzTaPRB8BT3G+jsBBGwnVF7uZD7c1PGcd5JtkEYE9E97EWN0xsD5jtYMtmuQO7LAo44nxZepFd/bJRe2yIkREXRy/8eWb0nzZ91YFfKdDVvRr3yROMcVMfmvAA+0/q/Hb4/wbaqkqcm3okaEYEJ1u/uNozGv8b2NnEKTrmUcWtzx5fLFcvSHrTvkBlELq/x+oVP/D3iiMfkH55K1U75esgevVZnLJLqxx9kJxNz6wKKZ/qdm6tRPZ2RZHhZBioGnOrvKhTe1J/hO/kBv34C31reiVDgXBci+Mpkwrm0C5SKAnAgMBAAGjggHHMIIBwzAJBgNVHRMEAjAAMFMGA1UdHwRMMEowSKBGoESGQmh0dHA6Ly9jcmwucGFjaS5nb3Yua3cvR292ZXJubWVudG9mS3V3YWl0UEFDSUNJVklMSUQvTGF0ZXN0Q1JMLmNybDAOBgNVHQ8BAf8EBAMCBsAwHQYDVR0OBBYEFL4cXwSJD9BSTvdnvxOZFFs1fsjjMB8GA1UdIwQYMBaAFPda3/JM4KzRJL5LhnWU9SIGbeMqMDMGCCsGAQUFBwEBBCcwJTAjBggrBgEFBQcwAYYXaHR0cDovL29jc3AucGFjaS5nb3Yua3cwaAYDVR0RBGEwX6Q+MDwxOjA4BgNVBAMMMSDYrNin2YrYsdin2YEg2KjZh9in2KrZhtis2KfYsSDYqNmH2KfYqtmG2KzYp9ix2KeBHWdhdXJhdmJoYXRuYWdhci50Y3NAZ21haWwuY29tMFMGA1UdEgRMMEqkSDBGMUQwQgYDVQQDDDvYp9mE2YfZitim2Kkg2KfZhNi52KfZhdipINmE2YTZhdi52YTZiNmF2KfYqiDYp9mE2YXYr9mG2YrYqTAdBgNVHSUEFjAUBggrBgEFBQcDBAYIKwYBBQUHAwIwDQYJKoZIhvcNAQELBQADggEBACTdJgzZJkTJCNs/np1HDEcJjV7PfhROu29BP8dM66DS1G6atAGv7YjrFDx6vaeFsXZKPZn+NqnJK70bkmFLQG2TZGo+F0pOGDTVUHlB/XobOJVuzxj+vjlCdncEpLFIzmqjqbUS4vvtgyXRHT9okM+RA7umBLbCI1uR+0OYevQlZ8Q0IKTYgD3moNcqaYWOEEMPgu+hiLph7wacX2ATKDd+A6K6fAOMuqkl21nD3h43YXQGYk2Gt0C6paxU0C4GgiXcK7K/h/RlPPH/LFmDfv79hCPPqDH2ahzgCW+1XsC9uoEZuXGD26YIRsCIt+M1FOo/GZl8w1WEh8qjwHi6Pjc=");
+//        Certificate certificate = CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(decoded));
+//        chain[0] = certificate;
+
+        new ClientServerSigning().sign(SRC, DEST + RESULT_FILES[0], chain, PdfSigner.CryptoStandard.CMS, "Account OnBoarding from Ahli United Bank, Kuwait", "Kuwait");
+    }
+
+    public void sign(String src, String dest, Certificate[] chain, PdfSigner.CryptoStandard subfilter, String reason, String location) throws GeneralSecurityException, IOException {
+        PdfReader reader = new PdfReader(src);
+        PdfSigner signer = new PdfSigner(reader, new FileOutputStream(dest), false);
+
+        // Create the signature appearance
+        Rectangle rect = new Rectangle(36, 648, 200, 100);
+        PdfSignatureAppearance appearance = signer.getSignatureAppearance();
+        appearance.setReason(reason).setLocation(location).setPageRect(rect).setPageNumber(1);
+        signer.setFieldName("Signature");
+
+        IExternalDigest digest = new BouncyCastleDigest();
+        IExternalSignature signature = new ServerSignature();
+
+        // Sign the document using the detached mode, CMS or CAdES equivalent.
+        signer.signDetached(digest, signature, chain, null, null, null, 0, subfilter);
+        System.out.println("Signed PDF Created.");
+    }
+
+    public class ServerSignature implements IExternalSignature {
+        public static final String SIGN = "http://demo.itextsupport.com/SigningApp/signbytes";
+
+        
+
+        public byte[] sign(byte[] message) throws GeneralSecurityException {
+            try {
+                URL url = new URL(SIGN);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setDoOutput(true);
+                conn.setRequestMethod("POST");
+                conn.connect();
+
+                OutputStream os = conn.getOutputStream();
+                os.write(message);
+                os.flush();
+                os.close();
+
+                InputStream is = conn.getInputStream();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] b = new byte[32];
+                int read;
+                while ((read = is.read(b)) != -1) {
+                    baos.write(b, 0, read);
+                }
+
+                is.close();
+
+                return baos.toByteArray();
+            } catch (IOException e) {
+                throw new PdfException(e);
+            }
+        }
+
+		@Override
+		public String getHashAlgorithm() {
+			return DigestAlgorithms.SHA256;
+		}
+		
+		@Override
+		public String getEncryptionAlgorithm() {
+			return "RSA";
+		}
+    }
+}
